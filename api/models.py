@@ -19,9 +19,9 @@ class Monitor(Base):
     __tablename__ = "monitors"
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
-    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", on_delete="CASCADE"), nullable=False)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
-    monitor_type: Mapped[str] = mapped_column(String(20), default="HTTP")  # 'HTTP' or 'CRON'
+    monitor_type: Mapped[str] = mapped_column(String(20), default="HTTP")
     target_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
     check_interval_seconds: Mapped[int] = mapped_column(Integer, default=60)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
@@ -35,7 +35,7 @@ class PingLog(Base):
     __tablename__ = "ping_logs"
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
-    monitor_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("monitors.id", on_delete="CASCADE"), nullable=False)
+    monitor_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("monitors.id", ondelete="CASCADE"), nullable=False)
     status_code: Mapped[int | None] = mapped_column(Integer, nullable=True)
     response_time_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
     is_up: Mapped[bool] = mapped_column(Boolean, nullable=False)
@@ -44,5 +44,4 @@ class PingLog(Base):
 
     monitor: Mapped["Monitor"] = relationship(back_populates="logs")
 
-# Core chronological performance optimization scanning index
 Index("idx_logs_monitor_time", PingLog.monitor_id, PingLog.checked_at.desc())
