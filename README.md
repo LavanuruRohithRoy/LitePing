@@ -1,86 +1,73 @@
 # LitePing Engine
 
-LitePing is an open-source, lightweight, self-hosted infrastructure monitoring system. It provides real-time HTTP availability checking and background cron backstop metrics using a highly concurrent, single-process asynchronous engine.
+LitePing is an open-source, lightweight, self-hosted infrastructure monitoring system. It provides real-time HTTP availability checking and background performance metrics using a highly concurrent, single-process asynchronous engine.
 
-## 🛠️ Complete System Stack
-- **Core API Engine:** Python 3.11 / FastAPI (Native Asynchronous ASGI)
-- **Data Persistence:** PostgreSQL 15 & SQLAlchemy 2.0 (Async Drivers)
+## 🛠️ System Stack
+- **Core API Engine:** Python 3.11 / FastAPI (Native Asynchronous ASGI with Lifespan Hooks)
+- **Data Persistence:** PostgreSQL 15 & SQLAlchemy 2.0 (Async Driver Mappings)
+- **Database Migrations Engine:** Alembic (Asynchronous Environment Pipeline)
 - **Data Validation & Filtering:** Pydantic V2 & Email-Validator
+- **Caching Layer & State Storage:** Serverless Redis via Upstash
 - **Cryptographic Security:** Passlib (Bcrypt) & PyJWT (HMAC-SHA256)
 
 ---
 
-## 🔒 Security & Authentication Architecture
+## ⚙️ In-Process Concurrency & Monitoring Architecture
 
-LitePing implements strict stateless authentication via OAuth2 using JSON Web Tokens (JWT). The system completely isolates raw internal database entries from network output operations.
-
-### 1. Data Schema Isolation & Pipeline Flow
-Incoming payloads undergo data sanitation checks via Pydantic before reaching the controller level.
+To remain cloud free-tier compliant, LitePing implements an integrated, non-blocking asynchronous architecture that eliminates the need for separate background worker containers.
 
 ```text
-[Client Request Payload] 
-       │
-       ▼
-[Pydantic Input Schema] (Enforces email-validator rules & length)
-       │
-       ▼
-[Bcrypt Hashing & Verification] (Executes 12-round salt hashing)
-       │
-       ▼
-[SQLAlchemy Async Engine] (Asynchronously flushes records to Postgres)
-       │
-       ▼
-[Pydantic Output Filter] (Strips 'hashed_password' from memory fields)
-       │
-       ▼
-[Client Network Response]
+       [FastAPI ASGI Web Server Entrypoint]
+                        │
+         ┌──────────────┴──────────────┐
+         ▼                             ▼
+[REST HTTP Controllers]       [Native Lifespan Context]
+(Auth / Monitor CRUD)                  │
+         │                             ▼
+         │                 [asyncio Long-Running Loop]
+         │                             │
+         │                             ▼
+         │                 [Active Targets DB Lookup]
+         │                             │
+         │                             ▼
+         │                 [asyncio.gather() Batching]
+         │                             │
+         ▼                             ▼
+[PostgreSQL Database] ◄──── [httpx Async HTTP Request]
+         │                             │
+         │                             ▼
+         └──────────────────► [Upstash Redis Real-time Cache]
 ```
 
-- **Input Ingestion (`api/schemas.py -> UserRegister`)**: Validates that incoming payloads provide syntactically accurate email addresses via strict regex lookups and ensures passwords pass minimum safety lengths (>= 6 characters).
-- **Output Masking (`api/schemas.py -> UserResponse`)**: Explicitly controls network serialization. It selectively permits fields like `id`, `email`, and `created_at` to cross the wire while completely stripping the `hashed_password` from the JSON payload.
-
-### 2. Cryptographic Security Standards
-- **Password Safety**: Raw passwords are never stored. The engine passes credentials through a blowfish-based cipher context (`passlib[bcrypt]`) utilizing specialized, randomized 12-round workload salt cycles.
-- **Stateless Verification Tokens**: Authentication issues a highly compressed, cryptographically signed bearer token via `HMAC-SHA256` containing an explicit payload signature expiration lifespan (`exp`) and the unique resource tracker identification string (`sub`).
+- **Lifespan Daemon Loop**: On application boot, an asynchronous event loop task is mounted inside the main process via `asyncio.create_task()`. It polls targets every 30 seconds without blocking the core HTTP worker paths.
+- **Concurrent Task Batching**: Target requests are batched using `asyncio.gather()`. This executes multiple network checks simultaneously, scaling easily to handle hundreds of websites.
+- **Real-Time Caching Structure**: Live availability metrics are written to Upstash Redis strings (`monitor:status:<id>`) for instant read access, while precise timestamp records are flushed to PostgreSQL for historical charting.
 
 ---
 
 ## 🚀 Local Development Setup & Operations
 
 ### 1. Boot Local Storage Infrastructure
-Spin up the isolated local PostgreSQL container engine in your background runtime environment:
+Spin up your background PostgreSQL storage node:
 ```bash
 docker compose up -d
 ```
 
-### 2. Verify Storage Infrastructure Status
-Ensure the database container node is successfully online and listening on its default internal network interface:
-```bash
-docker ps
+### 2. Configure Database Migrations
+Initialize the structural layouts inside your running PostgreSQL container using Alembic:
+```powershell
+alembic upgrade head
 ```
 
-### 3. Native Virtual Environment Execution
-Activate your isolated Python sandbox package registry, mount dependencies, and initialize the ASGI loop server:
+### 3. Run Application Live Reloader
+Activate your virtual environment and start your local server:
 ```powershell
-# Create environment
-python -m venv .venv
-
-# PowerShell Execution Policy Bypass
-Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process
-
-# Activation
 .venv\Scripts\Activate.ps1
-
-# Dependency Ingestion
-pip install -r requirements.txt
-
-# Run Application Live Reloader
 uvicorn api.main:app --reload
 ```
 
-### 4. API Sandbox Interaction Matrix
-Once the local Uvicorn daemon binds to your network interfaces, visit the interactive OpenAPI sandbox interface to test endpoints:
-- **Swagger Documentation URL**: `http://127.0.0`
-- **Functional Check Node**: `GET /health` (Verifies loop processing health)
-- **Account Generation Node**: `POST /auth/register` (Parses and writes clean records)
-- **Token Verification Node**: `POST /auth/login` (Issues encrypted Bearer JWT components)
+### 4. API Sandbox Matrix Check
+Visit your local sandbox interface to interact with your code:
+- **Swagger Documentation URL**: `http://127.0.0.1:8000/docs`
+- **Target Generation Node**: `POST /monitors` (Protected route; requires JWT Bearer authorization)
+- **Historical Analysis Node**: `GET /monitors/{id}/logs` (Fetches metrics records)

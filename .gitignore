@@ -8,5 +8,4 @@ venv/
 .vscode/
 .idea/
 *.log
-alembic.ini
 alembic/
