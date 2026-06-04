@@ -54,12 +54,11 @@ LitePing completely democratizes this layer by offering a 100% free, self-hosted
 
 ## 📖 Deep Engineering Documentation Manuals
 For absolute systemic transparency regarding our design parameters, components, and trade-offs, review our dedicated technical whitepapers inside the `docs/` folder:
-- 📄 [01. System Vision, Reality, & Strategic Engineering](./docs/01_system_vision.md) — Problem metrics and explicit cloud compromises.
-- 📄 [02. Component Matrix & Database Schema](./docs/02_component_matrix.md) — File-by-file blueprint mapping and relational ER diagrams.
-- 📄 [03. Runtime Operations & Concurrency](./docs/03_runtime_pipelines.md) — Asynchronous loop execution timelines and task batching.
-- 📄 [04. Controller Specs & Response Schemas](./docs/04_controller_specs.md) — Endpoint pathways validation matrix guidelines.
-- 📄 [05. Strategic Vision & Developer Economics](./docs/05_project_vision.md) — Phase-by-phase scaling roadmap parameters.
-- 📂 [Technical Documentation Index Manual](./docs/README.md) — The central index matrix guide.
+- 📄 [01. System Vision, Reality, & Strategic Engineering](./docs/system_vision.md) — Problem metrics and explicit cloud compromises.
+- 📄 [02. Component Matrix & Database Schema](./docs/component_matrix.md) — File-by-file blueprint mapping and relational ER diagrams.
+- 📄 [03. Runtime Operations & Concurrency](./docs/runtime_pipelines.md) — Asynchronous loop execution timelines and task batching.
+- 📄 [04. Controller Specs & Response Schemas](./docs/controller_specs.md) — Endpoint pathways validation matrix guidelines.
+- 📄 [05. Strategic Vision & Developer Economics](./docs/project_vision.md) — Phase-by-phase scaling roadmap parameters.
 
 ---
 
@@ -105,8 +104,8 @@ Boot up your FastAPI application using Uvicorn with auto-reload flags active:
 ```powershell
 uvicorn api.main:app --reload
 ```
-*   **Interactive OpenAPI Sandbox UI:** `http://127.0.0`
-*   **System Health Probe Node:** `GET http://127.0.0`
+*   **Interactive OpenAPI Sandbox UI:** `http://127.0.0.1:8000/docs`
+*   **System Health Probe Node:** `GET http://127.0.0.1:8000/openapi.json`
 
 ---
 
