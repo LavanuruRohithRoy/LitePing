@@ -56,56 +56,87 @@ LitePing completely democratizes this layer by offering a 100% free, self-hosted
 For absolute systemic transparency regarding our design parameters, components, and trade-offs, review our dedicated technical whitepapers inside the `docs/` folder:
 - 📄 [01. System Vision, Reality, & Strategic Engineering](./docs/system_vision.md) — Problem metrics and explicit cloud compromises.
 - 📄 [02. Component Matrix & Database Schema](./docs/component_matrix.md) — File-by-file blueprint mapping and relational ER diagrams.
-- 📄 [03. Runtime Operations & Concurrency](./docs/runtime_pipelines.md) — Asynchronous loop execution timelines and task batching.
+- 📄 [03. Runtime Operations & Concurrency](./docs/runtime_pipeline.md) — Asynchronous loop execution timelines and task batching.
 - 📄 [04. Controller Specs & Response Schemas](./docs/controller_specs.md) — Endpoint pathways validation matrix guidelines.
 - 📄 [05. Strategic Vision & Developer Economics](./docs/project_vision.md) — Phase-by-phase scaling roadmap parameters.
 
 ---
 
 ## 🚀 Realistic Local Development Setup
+This repo is intentionally lightweight. A first local setup only needs Python, Docker, and the environment variables below.
 
-### 1. Configure the Local Environment Variables
-Create a file named `.env` in the root folder of your project workspace to feed variables safely into Pydantic Settings:
+### 1. Create the local environment file
+Create a `.env` file in the repository root:
 ```env
 PROJECT_NAME="LitePing Engine"
-SECRET_KEY="your_secure_development_random_cryptographic_hash_string"
+SECRET_KEY="replace-with-a-long-random-string"
 ALGORITHM="HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES=60
 
-# Local Container Storage Variables
 DATABASE_URL="postgresql+asyncpg://postgres:postgres@localhost:5432/liteping"
-
-# Upstash Connection Variables (Paste your real Upstash token string here)
 REDIS_URL="redis://default:your_upstash_password@your_endpoint.upstash.io:6379/0"
 ```
 
-### 2. Boot Your Background PostgreSQL Storage Node
-Spin up the isolated database container using Docker Compose:
-```bash
+Notes:
+- `DATABASE_URL` points to the local Postgres container from `docker-compose.yml`.
+- `REDIS_URL` is only needed for live status caching; for deployment it can point to Upstash.
+- `SECRET_KEY` should be unique per machine or environment.
+
+### 2. Start the database
+Bring up the local PostgreSQL container:
+```powershell
 docker compose up -d
 ```
-Verify that the database node is online and listening on its network interface:
-```bash
+
+Optional check:
+```powershell
 docker ps
 ```
 
-### 3. Initialize and Execute Your Local Database Migrations
-Activate your local virtual environment layout, and run Alembic to apply structural table configurations natively inside your running database container:
+### 3. Activate the virtual environment
+Use the workspace venv before running migrations or tests:
 ```powershell
-# Activate local isolated sandbox environment
 .venv\Scripts\Activate.ps1
+```
 
-# Upgrade storage tables directly to latest version history
+### 4. Run the database migrations
+Apply the current schema to the local database:
+```powershell
 alembic upgrade head
 ```
 
-### 4. Launch the ASGI Application Web Server
-Boot up your FastAPI application using Uvicorn with auto-reload flags active:
+### 5. Start the API server
+Launch FastAPI with auto-reload:
 ```powershell
 uvicorn api.main:app --reload
 ```
-*   **Interactive OpenAPI Sandbox UI:** `http://127.0.0.1:8000/docs`
-*   **System Health Probe Node:** `GET http://127.0.0.1:8000/openapi.json`
+
+Useful local URLs:
+- `http://127.0.0.1:8000/docs` — interactive OpenAPI UI
+- `http://127.0.0.1:8000/health` — lightweight health check
+
+---
+
+## 🧪 Test Specification & Validation
+
+LitePing uses a small, focused `unittest` suite to keep validation fast and dependency-light.
+
+### What the tests cover
+- **Auth flow:** registration duplicate handling and token login.
+- **Monitor flow:** create, list, delete, and log retrieval for owned monitors.
+- **Runtime worker:** successful and failed HTTP checks write `PingLog` rows.
+- **Background loop:** only HTTP monitors are checked, and status updates map to the correct monitor IDs.
+- **Health check:** the system health endpoint returns the expected operational payload.
+
+### How to run locally
+```powershell
+python -m unittest discover -s tests -v
+```
+
+### What a passing run means
+- The main request flow is wired correctly.
+- The worker can ping targets and persist logs.
+- The in-process scheduler behavior matches the intended monitor lifecycle.
 
 ---
 
@@ -118,6 +149,8 @@ LitePing features fully integrated **Infrastructure-as-Code Blueprint Manifests*
 3.  Log into your [Render Cloud Console](https://render.com). Click **New +** and select the **Blueprint** option.
 4.  Link your target GitHub repository. Render will automatically parse your `render.yaml` specification file and configure your web application and database containers.
 5.  Paste your copied Upstash connection string into the `REDIS_URL` environment parameter variable block on the dashboard panel UI and hit deploy. Render will automatically handle your SSL certificates and boot the engine live.
+
+`render.yaml` is a deployment manifest, not a local-development requirement. It exists so the same project can be booted from Render with consistent environment settings and a managed Postgres database when you are ready to publish.
 
 ---
 
