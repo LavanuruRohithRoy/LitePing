@@ -2,8 +2,14 @@ from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, Asyn
 from sqlalchemy.orm import DeclarativeBase
 from api.config import settings
 
+def _normalize_database_url(database_url: str) -> str:
+    """Ensure SQLAlchemy uses the asyncpg driver for async engine creation."""
+    if database_url.startswith("postgresql://"):
+        return database_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+    return database_url
+
 # Instantiate non-blocking connection pool to target database engine
-engine = create_async_engine(settings.DATABASE_URL, echo=False, future=True)
+engine = create_async_engine(_normalize_database_url(settings.DATABASE_URL), echo=False, future=True)
 
 # Generate isolated transaction context session factories
 AsyncSessionLocal = async_sessionmaker(
