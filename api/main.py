@@ -5,8 +5,8 @@ import redis.asyncio as aioredis
 from sqlalchemy.future import select
 
 from api.config import settings
-from api.database import AsyncSessionLocal
-from api.models import Monitor
+from api.database import AsyncSessionLocal, engine, Base
+from api.models import User, Monitor, PingLog
 from api.routers import auth, monitors
 from workers.tasks import execute_http_ping
 
@@ -20,6 +20,12 @@ def _normalize_redis_url(redis_url: str) -> str:
 
 # Instantiate global thread-safe Upstash client connector
 redis_client = aioredis.from_url(_normalize_redis_url(settings.REDIS_URL), decode_responses=True)
+
+
+async def initialize_database_schema():
+    """Create missing tables on startup so the app can boot cleanly on a fresh database."""
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
 
 async def continuous_monitoring_loop():
     """
@@ -62,6 +68,7 @@ async def continuous_monitoring_loop():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Manages application startup and shutdown hooks cleanly."""
+    await initialize_database_schema()
     # Startup: Launch the concurrent in-process background monitoring loop
     bg_task = asyncio.create_task(continuous_monitoring_loop())
     yield
