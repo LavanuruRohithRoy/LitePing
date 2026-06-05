@@ -10,8 +10,16 @@ from api.models import Monitor
 from api.routers import auth, monitors
 from workers.tasks import execute_http_ping
 
+def _normalize_redis_url(redis_url: str) -> str:
+    """Accept a full Redis URL or a raw Upstash URL/token and coerce it into a Redis scheme."""
+    clean_url = redis_url.strip()
+    if clean_url.startswith(("redis://", "rediss://", "unix://")):
+        return clean_url
+    return f"rediss://{clean_url}"
+
+
 # Instantiate global thread-safe Upstash client connector
-redis_client = aioredis.from_url(settings.REDIS_URL, decode_responses=True)
+redis_client = aioredis.from_url(_normalize_redis_url(settings.REDIS_URL), decode_responses=True)
 
 async def continuous_monitoring_loop():
     """
