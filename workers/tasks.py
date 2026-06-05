@@ -1,9 +1,9 @@
 import time
 import httpx
-from sqlalchemy.ext.asyncio import AsyncSession
+from api.database import AsyncSessionLocal
 from api.models import PingLog
 
-async def execute_http_ping(monitor_id: str, url: str, db: AsyncSession) -> bool:
+async def execute_http_ping(monitor_id: str, url: str) -> bool:
     """
     Executes a non-blocking asynchronous HTTP GET request against a target URL.
     Calculates operational latencies and logs failures safely inside the database session context.
@@ -29,12 +29,14 @@ async def execute_http_ping(monitor_id: str, url: str, db: AsyncSession) -> bool
             response_time_ms = int((time.perf_counter() - start_time) * 1000)
             error_message = f"Network connection failed: {str(exc)}"
 
-    log_entry = PingLog(
-        monitor_id=monitor_id,
-        status_code=status_code,
-        response_time_ms=response_time_ms,
-        is_up=is_up,
-        error_message=error_message
-    )
-    db.add(log_entry)
+    async with AsyncSessionLocal() as db:
+        log_entry = PingLog(
+            monitor_id=monitor_id,
+            status_code=status_code,
+            response_time_ms=response_time_ms,
+            is_up=is_up,
+            error_message=error_message
+        )
+        db.add(log_entry)
+        await db.commit()
     return is_up

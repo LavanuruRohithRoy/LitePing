@@ -25,22 +25,25 @@ async def continuous_monitoring_loop():
                 result = await db.execute(query)
                 active_monitors = result.scalars().all()
 
-                tasks = []
-                for monitor in active_monitors:
-                    if monitor.monitor_type == "HTTP" and monitor.target_url:
-                        # Append non-blocking coroutines into immediate execution matrix
-                        tasks.append(execute_http_ping(monitor.id, monitor.target_url, db))
+                eligible_monitors = [
+                    monitor
+                    for monitor in active_monitors
+                    if monitor.monitor_type == "HTTP" and monitor.target_url
+                ]
+
+                tasks = [
+                    execute_http_ping(monitor.id, monitor.target_url)
+                    for monitor in eligible_monitors
+                ]
                 
                 if tasks:
                     results = await asyncio.gather(*tasks, return_exceptions=True)
                     
                     # Store real-time status cache values inside Upstash Redis
-                    for monitor, is_up in zip(active_monitors, results):
+                    for monitor, is_up in zip(eligible_monitors, results):
                         if not isinstance(is_up, Exception):
                             status_str = "UP" if is_up else "DOWN"
                             await redis_client.set(f"monitor:status:{monitor.id}", status_str)
-                    
-                    await db.commit()
             except Exception as loop_error:
                 # Shield loop from dying on connection latency hiccups
                 print(f"Background monitoring engine loop error: {str(loop_error)}")
