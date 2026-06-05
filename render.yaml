@@ -5,6 +5,8 @@ services:
     dockerfilePath: Dockerfile
     plan: free
     region: singapore
+    healthCheckPath: /health
+    preDeployCommand: alembic upgrade head
     envVars:
       - key: PROJECT_NAME
         value: "LitePing Production Engine"
