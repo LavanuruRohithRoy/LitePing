@@ -25,4 +25,4 @@ databases:
   - name: liteping-db
     plan: free
     region: singapore
-    postgresVersion: 15
+    postgresMajorVersion: "15"
